@@ -1,0 +1,405 @@
+{
+  "model_name": "Qwen3.5-122B-A10B",
+  "model_path": "(catalog) Qwen3.5-122B-A10B",
+  "architecture": "moe_hybrid",
+  "num_layers": 48,
+  "bf16_size_gb": 240.0,
+  "baseline_perplexity": 5.0,
+  "params_billions": 122.0,
+  "active_params_billions": 10.0,
+  "sources": [
+    "unsloth_kld",
+    "kaitchup"
+  ],
+  "confidence": 0.9,
+  "special_tensors": {
+    "blk.0.ffn_gate_shexp.weight": "BF16",
+    "blk.0.ffn_up_shexp.weight": "BF16",
+    "blk.0.ffn_down_shexp.weight": "BF16",
+    "blk.1.ffn_gate_shexp.weight": "BF16",
+    "blk.1.ffn_up_shexp.weight": "BF16",
+    "blk.1.ffn_down_shexp.weight": "BF16",
+    "blk.2.ffn_gate_shexp.weight": "BF16",
+    "blk.2.ffn_up_shexp.weight": "BF16",
+    "blk.2.ffn_down_shexp.weight": "BF16",
+    "blk.3.ffn_gate_shexp.weight": "BF16",
+    "blk.3.ffn_up_shexp.weight": "BF16",
+    "blk.3.ffn_down_shexp.weight": "BF16",
+    "blk.4.ffn_gate_shexp.weight": "BF16",
+    "blk.4.ffn_up_shexp.weight": "BF16",
+    "blk.4.ffn_down_shexp.weight": "BF16",
+    "blk.5.ffn_gate_shexp.weight": "BF16",
+    "blk.5.ffn_up_shexp.weight": "BF16",
+    "blk.5.ffn_down_shexp.weight": "BF16",
+    "blk.6.ffn_gate_shexp.weight": "BF16",
+    "blk.6.ffn_up_shexp.weight": "BF16",
+    "blk.6.ffn_down_shexp.weight": "BF16",
+    "blk.7.ffn_gate_shexp.weight": "BF16",
+    "blk.7.ffn_up_shexp.weight": "BF16",
+    "blk.7.ffn_down_shexp.weight": "BF16",
+    "blk.8.ffn_gate_shexp.weight": "BF16",
+    "blk.8.ffn_up_shexp.weight": "BF16",
+    "blk.8.ffn_down_shexp.weight": "BF16",
+    "blk.9.ffn_gate_shexp.weight": "BF16",
+    "blk.9.ffn_up_shexp.weight": "BF16",
+    "blk.9.ffn_down_shexp.weight": "BF16",
+    "blk.10.ffn_gate_shexp.weight": "BF16",
+    "blk.10.ffn_up_shexp.weight": "BF16",
+    "blk.10.ffn_down_shexp.weight": "BF16",
+    "blk.11.ffn_gate_shexp.weight": "BF16",
+    "blk.11.ffn_up_shexp.weight": "BF16",
+    "blk.11.ffn_down_shexp.weight": "BF16",
+    "blk.12.ffn_gate_shexp.weight": "BF16",
+    "blk.12.ffn_up_shexp.weight": "BF16",
+    "blk.12.ffn_down_shexp.weight": "BF16",
+    "blk.13.ffn_gate_shexp.weight": "BF16",
+    "blk.13.ffn_up_shexp.weight": "BF16",
+    "blk.13.ffn_down_shexp.weight": "BF16",
+    "blk.14.ffn_gate_shexp.weight": "BF16",
+    "blk.14.ffn_up_shexp.weight": "BF16",
+    "blk.14.ffn_down_shexp.weight": "BF16",
+    "blk.15.ffn_gate_shexp.weight": "BF16",
+    "blk.15.ffn_up_shexp.weight": "BF16",
+    "blk.15.ffn_down_shexp.weight": "BF16",
+    "blk.16.ffn_gate_shexp.weight": "BF16",
+    "blk.16.ffn_up_shexp.weight": "BF16",
+    "blk.16.ffn_down_shexp.weight": "BF16",
+    "blk.17.ffn_gate_shexp.weight": "BF16",
+    "blk.17.ffn_up_shexp.weight": "BF16",
+    "blk.17.ffn_down_shexp.weight": "BF16",
+    "blk.18.ffn_gate_shexp.weight": "BF16",
+    "blk.18.ffn_up_shexp.weight": "BF16",
+    "blk.18.ffn_down_shexp.weight": "BF16",
+    "blk.19.ffn_gate_shexp.weight": "BF16",
+    "blk.19.ffn_up_shexp.weight": "BF16",
+    "blk.19.ffn_down_shexp.weight": "BF16",
+    "blk.20.ffn_gate_shexp.weight": "BF16",
+    "blk.20.ffn_up_shexp.weight": "BF16",
+    "blk.20.ffn_down_shexp.weight": "BF16",
+    "blk.21.ffn_gate_shexp.weight": "BF16",
+    "blk.21.ffn_up_shexp.weight": "BF16",
+    "blk.21.ffn_down_shexp.weight": "BF16",
+    "blk.22.ffn_gate_shexp.weight": "BF16",
+    "blk.22.ffn_up_shexp.weight": "BF16",
+    "blk.22.ffn_down_shexp.weight": "BF16",
+    "blk.23.ffn_gate_shexp.weight": "BF16",
+    "blk.23.ffn_up_shexp.weight": "BF16",
+    "blk.23.ffn_down_shexp.weight": "BF16",
+    "blk.24.ffn_gate_shexp.weight": "BF16",
+    "blk.24.ffn_up_shexp.weight": "BF16",
+    "blk.24.ffn_down_shexp.weight": "BF16",
+    "blk.25.ffn_gate_shexp.weight": "BF16",
+    "blk.25.ffn_up_shexp.weight": "BF16",
+    "blk.25.ffn_down_shexp.weight": "BF16",
+    "blk.26.ffn_gate_shexp.weight": "BF16",
+    "blk.26.ffn_up_shexp.weight": "BF16",
+    "blk.26.ffn_down_shexp.weight": "BF16",
+    "blk.27.ffn_gate_shexp.weight": "BF16",
+    "blk.27.ffn_up_shexp.weight": "BF16",
+    "blk.27.ffn_down_shexp.weight": "BF16",
+    "blk.28.ffn_gate_shexp.weight": "BF16",
+    "blk.28.ffn_up_shexp.weight": "BF16",
+    "blk.28.ffn_down_shexp.weight": "BF16",
+    "blk.29.ffn_gate_shexp.weight": "BF16",
+    "blk.29.ffn_up_shexp.weight": "BF16",
+    "blk.29.ffn_down_shexp.weight": "BF16",
+    "blk.30.ffn_gate_shexp.weight": "BF16",
+    "blk.30.ffn_up_shexp.weight": "BF16",
+    "blk.30.ffn_down_shexp.weight": "BF16",
+    "blk.31.ffn_gate_shexp.weight": "BF16",
+    "blk.31.ffn_up_shexp.weight": "BF16",
+    "blk.31.ffn_down_shexp.weight": "BF16",
+    "blk.32.ffn_gate_shexp.weight": "BF16",
+    "blk.32.ffn_up_shexp.weight": "BF16",
+    "blk.32.ffn_down_shexp.weight": "BF16",
+    "blk.33.ffn_gate_shexp.weight": "BF16",
+    "blk.33.ffn_up_shexp.weight": "BF16",
+    "blk.33.ffn_down_shexp.weight": "BF16",
+    "blk.34.ffn_gate_shexp.weight": "BF16",
+    "blk.34.ffn_up_shexp.weight": "BF16",
+    "blk.34.ffn_down_shexp.weight": "BF16",
+    "blk.35.ffn_gate_shexp.weight": "BF16",
+    "blk.35.ffn_up_shexp.weight": "BF16",
+    "blk.35.ffn_down_shexp.weight": "BF16",
+    "blk.36.ffn_gate_shexp.weight": "BF16",
+    "blk.36.ffn_up_shexp.weight": "BF16",
+    "blk.36.ffn_down_shexp.weight": "BF16",
+    "blk.37.ffn_gate_shexp.weight": "BF16",
+    "blk.37.ffn_up_shexp.weight": "BF16",
+    "blk.37.ffn_down_shexp.weight": "BF16",
+    "blk.38.ffn_gate_shexp.weight": "BF16",
+    "blk.38.ffn_up_shexp.weight": "BF16",
+    "blk.38.ffn_down_shexp.weight": "BF16",
+    "blk.39.ffn_gate_shexp.weight": "BF16",
+    "blk.39.ffn_up_shexp.weight": "BF16",
+    "blk.39.ffn_down_shexp.weight": "BF16",
+    "blk.40.ffn_gate_shexp.weight": "BF16",
+    "blk.40.ffn_up_shexp.weight": "BF16",
+    "blk.40.ffn_down_shexp.weight": "BF16",
+    "blk.41.ffn_gate_shexp.weight": "BF16",
+    "blk.41.ffn_up_shexp.weight": "BF16",
+    "blk.41.ffn_down_shexp.weight": "BF16",
+    "blk.42.ffn_gate_shexp.weight": "BF16",
+    "blk.42.ffn_up_shexp.weight": "BF16",
+    "blk.42.ffn_down_shexp.weight": "BF16",
+    "blk.43.ffn_gate_shexp.weight": "BF16",
+    "blk.43.ffn_up_shexp.weight": "BF16",
+    "blk.43.ffn_down_shexp.weight": "BF16",
+    "blk.44.ffn_gate_shexp.weight": "BF16",
+    "blk.44.ffn_up_shexp.weight": "BF16",
+    "blk.44.ffn_down_shexp.weight": "BF16",
+    "blk.45.ffn_gate_shexp.weight": "BF16",
+    "blk.45.ffn_up_shexp.weight": "BF16",
+    "blk.45.ffn_down_shexp.weight": "BF16",
+    "blk.46.ffn_gate_shexp.weight": "BF16",
+    "blk.46.ffn_up_shexp.weight": "BF16",
+    "blk.46.ffn_down_shexp.weight": "BF16",
+    "blk.47.ffn_gate_shexp.weight": "BF16",
+    "blk.47.ffn_up_shexp.weight": "BF16",
+    "blk.47.ffn_down_shexp.weight": "BF16",
+    "token_embd.weight": "Q6_K",
+    "output.weight": "Q6_K"
+  },
+  "layers": [
+    {
+      "index": 0,
+      "sensitivity_score": 1.7378,
+      "sensitivities": {}
+    },
+    {
+      "index": 1,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 2,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 3,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 4,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 5,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 6,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 7,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 8,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 9,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 10,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 11,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 12,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 13,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 14,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 15,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 16,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 17,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 18,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 19,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 20,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 21,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 22,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 23,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 24,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 25,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 26,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 27,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 28,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 29,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 30,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 31,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 32,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 33,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 34,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 35,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 36,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 37,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 38,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 39,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 40,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 41,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 42,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 43,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 44,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 45,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 46,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 47,
+      "sensitivity_score": 0.9676,
+      "sensitivities": {}
+    }
+  ]
+}

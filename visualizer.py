@@ -45,7 +45,7 @@ def print_sensitivity_heatmap(profile):
     layers = profile["layers"]
     num_layers = profile["num_layers"]
 
-    max_score = max(l["sensitivity_score"] for l in layers)
+    max_score = max(ly["sensitivity_score"] for ly in layers)
 
     print(f"\n   {'─' * 60}")
     print(f"   Layer Sensitivity Heatmap: {profile['model_name']}")
@@ -71,8 +71,11 @@ def print_sensitivity_heatmap(profile):
             print(f"   {idx:>5}    {score:>5.3f}  {bar}  {zone}")
 
     print(f"   {'─' * 60}")
-    print(f"   Max sensitivity: {_red(f'{max_score:.3f}')} (layer {max(layers, key=lambda l: l['sensitivity_score'])['index']})")
-    print(f"   Min sensitivity: {_green(f'{min(l['sensitivity_score'] for l in layers):.3f}')} (layer {min(layers, key=lambda l: l['sensitivity_score'])['index']})")
+    most_sensitive = max(layers, key=lambda ly: ly["sensitivity_score"])
+    least_sensitive = min(layers, key=lambda ly: ly["sensitivity_score"])
+    min_score = least_sensitive["sensitivity_score"]
+    print(f"   Max sensitivity: {_red(f'{max_score:.3f}')} (layer {most_sensitive['index']})")
+    print(f"   Min sensitivity: {_green(f'{min_score:.3f}')} (layer {least_sensitive['index']})")
 
     # Show the U-curve pattern
     n = num_layers
@@ -82,9 +85,9 @@ def print_sensitivity_heatmap(profile):
         ("Last 3 layers (output)", layers[-3:]),
     ]
 
-    print(f"\n   U-Curve Summary:")
+    print("\n   U-Curve Summary:")
     for label, group in thirds:
-        avg = sum(l["sensitivity_score"] for l in group) / len(group)
+        avg = sum(ly["sensitivity_score"] for ly in group) / len(group)
         bar = _sensitivity_bar(avg, max_score, width=15)
         print(f"     {label:<26} avg={avg:.3f} {bar}")
 
@@ -94,7 +97,7 @@ def print_allocation_table(allocation, profile):
     layers = allocation["layers"]
     num_layers = len(layers)
 
-    print(f"\n   Allocation Summary:")
+    print("\n   Allocation Summary:")
     print(f"   ├── Strategy: {allocation['strategy']}")
     print(f"   ├── Budget: {allocation['budget_gb']:.1f}GB")
     print(f"   ├── Model size: {_bold(f'{allocation['total_size_gb']:.2f}GB')}")
@@ -105,7 +108,7 @@ def print_allocation_table(allocation, profile):
 
     # Distribution summary
     dist = allocation["level_distribution"]
-    print(f"\n   Quantization Distribution:")
+    print("\n   Quantization Distribution:")
     for quant in QUANT_ORDER:
         if quant in dist:
             count = dist[quant]
@@ -113,21 +116,21 @@ def print_allocation_table(allocation, profile):
             bar = "█" * int(pct / 2)
             color_icon = QUANT_OPTIONS[quant]["color"]
             bits = QUANT_OPTIONS[quant]["bits"]
-            print(f"     {color_icon} {quant:<6} ({bits:>4.1f}b): {count:>3} layers ({pct:>5.1f}%) {bar}")
+            print(f"     {color_icon} {quant:<8} ({bits:>4.1f}b): {count:>3} layers ({pct:>5.1f}%) {bar}")
 
     # Comparison vs uniform Q4_K
     comp = allocation.get("comparison_vs_uniform_q4k", {})
     if comp:
         improvement = comp.get("adaptive_quality_improvement_pct", 0)
         size_diff = comp.get("adaptive_size_difference_gb", 0)
-        print(f"\n   vs Uniform Q4_K:")
+        print("\n   vs Uniform Q4_K:")
         if improvement > 0:
             print(f"     {_green(f'✓ {improvement:.1f}% better quality')} at {size_diff:+.2f}GB size difference")
         else:
             print(f"     {_yellow(f'{improvement:.1f}% quality difference')} at {size_diff:+.2f}GB size")
 
     # Compact layer view
-    print(f"\n   Per-layer view (compact):")
+    print("\n   Per-layer view (compact):")
     row = "   "
     for layer in layers:
         q = layer["quant"]
@@ -184,5 +187,72 @@ def print_comparison(allocations, profile):
 
         print(f"   {device_name:<25} {size:>6.1f}G {bits:>8.1f}b {compress:>8.1f}x {cost:>12.4f} {vs_str:>10}")
 
-    print(f"\n   Quality cost: lower = better (sensitivity-weighted quantization error)")
-    print(f"   vs Q4_K: positive = adaptive preserves more quality at same avg bitrate")
+    print("\n   Quality cost: lower = better (sensitivity-weighted quantization error)")
+    print("   vs Q4_K: positive = adaptive preserves more quality at same avg bitrate")
+
+
+def print_catalog_list(models):
+    """Print a table of all cataloged models."""
+    print(f"\n   {'─' * 80}")
+    print("   Available Models")
+    print(f"   {'─' * 80}")
+    print(f"   {'Model':<28} {'Arch':<12} {'Params':>8} {'BF16 Size':>10} {'Layers':>7} {'Sources'}")
+    print(f"   {'─' * 80}")
+
+    for m in models:
+        params = f"{m['params_b']:.0f}B"
+        if m.get("active_params_b"):
+            params += f" ({m['active_params_b']:.0f}B active)"
+        size = f"{m['bf16_size_gb']:.0f}GB"
+        sources = ", ".join(m.get("sources", []))
+        print(f"   {m['name']:<28} {m.get('architecture', 'dense'):<12} {params:>8} {size:>10} {m['num_layers']:>7} {sources}")
+
+    print(f"   {'─' * 80}")
+
+
+def print_benchmark(adaptive_alloc, uniform_result, profile, budget_gb):
+    """Print side-by-side benchmark: adaptive vs best uniform quant."""
+    model_name = profile["model_name"]
+    bf16_size = profile.get("bf16_size_gb", 0)
+
+    print(f"\n   {'═' * 72}")
+    print(f"   BENCHMARK: {model_name} @ {budget_gb}GB budget")
+    print(f"   BF16 reference size: {bf16_size:.1f}GB")
+    print(f"   {'═' * 72}")
+
+    # Side by side
+    print(f"\n   {'Metric':<30} {'Adaptive':>18} {'Uniform ' + uniform_result['quant']:>18}")
+    print(f"   {'─' * 68}")
+
+    a = adaptive_alloc
+    u = uniform_result
+
+    print(f"   {'Total size':<30} {a['total_size_gb']:>17.2f}G {u['total_size_gb']:>17.2f}G")
+    print(f"   {'Avg bits/weight':<30} {a['avg_bits_per_weight']:>18.2f} {u['bits']:>18.2f}")
+    print(f"   {'Compression ratio':<30} {a['compression_ratio']:>17.2f}x {u['compression_ratio']:>17.2f}x")
+    print(f"   {'Quality cost':<30} {a['total_quality_cost']:>18.6f} {u['total_quality_cost']:>18.6f}")
+
+    # Quality improvement
+    if u["total_quality_cost"] > 0:
+        improvement = (1 - a["total_quality_cost"] / u["total_quality_cost"]) * 100
+        if improvement > 0:
+            result_str = _green(f"+{improvement:.1f}% better quality")
+        else:
+            result_str = _red(f"{improvement:.1f}% quality")
+    else:
+        improvement = 0
+        result_str = "N/A (uniform cost = 0)"
+
+    print(f"   {'─' * 68}")
+    print(f"   Adaptive advantage: {result_str}")
+
+    # Quant distribution
+    dist = a["level_distribution"]
+    levels_used = len(dist)
+    print(f"   Quant levels used: {levels_used} ({', '.join(f'{q}:{n}' for q, n in sorted(dist.items(), key=lambda x: QUANT_OPTIONS.get(x[0], {}).get('bits', 0), reverse=True))})")
+
+    if u.get("exceeds_budget"):
+        print(f"\n   {_red('⚠ WARNING')}: Even the most aggressive uniform quant ({u['quant']}) exceeds the {budget_gb}GB budget.")
+        print(f"   Uniform {u['quant']} size: {u['total_size_gb']:.2f}GB — model cannot fit uniformly.")
+
+    print(f"   {'═' * 72}")

@@ -73,4 +73,13 @@ DEVICE_PRESETS = {
         "bandwidth_gbs": 150,
         "neural_engine_tops": 38,
     },
+
+    # M4 generation (2024-2025) - additional configs
+    "m4-air-32gb": {
+        "name": "MacBook Air M4 32GB",
+        "memory_gb": 32,
+        "os_overhead_gb": 6,
+        "bandwidth_gbs": 120,
+        "neural_engine_tops": 38,
+    },
 }

@@ -1,0 +1,340 @@
+{
+  "model_name": "Qwen3.5-27B",
+  "model_path": "(catalog) Qwen3.5-27B",
+  "architecture": "hybrid",
+  "num_layers": 64,
+  "bf16_size_gb": 54.0,
+  "baseline_perplexity": 5.8,
+  "params_billions": 27.0,
+  "sources": [
+    "unsloth_kld",
+    "kaitchup"
+  ],
+  "confidence": 0.9,
+  "special_tensors": {
+    "token_embd.weight": "Q6_K",
+    "output.weight": "Q6_K"
+  },
+  "layers": [
+    {
+      "index": 0,
+      "sensitivity_score": 1.7378,
+      "sensitivities": {}
+    },
+    {
+      "index": 1,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 2,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 3,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 4,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 5,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 6,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 7,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 8,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 9,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 10,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 11,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 12,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 13,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 14,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 15,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 16,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 17,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 18,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 19,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 20,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 21,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 22,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 23,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 24,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 25,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 26,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 27,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 28,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 29,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 30,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 31,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 32,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 33,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 34,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 35,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 36,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 37,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 38,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 39,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 40,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 41,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 42,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 43,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 44,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 45,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 46,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 47,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 48,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 49,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 50,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 51,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 52,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 53,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 54,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 55,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 56,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 57,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 58,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 59,
+      "sensitivity_score": 0.4433,
+      "sensitivities": {}
+    },
+    {
+      "index": 60,
+      "sensitivity_score": 1.0824,
+      "sensitivities": {}
+    },
+    {
+      "index": 61,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 62,
+      "sensitivity_score": 1.3445,
+      "sensitivities": {}
+    },
+    {
+      "index": 63,
+      "sensitivity_score": 0.9676,
+      "sensitivities": {}
+    }
+  ]
+}

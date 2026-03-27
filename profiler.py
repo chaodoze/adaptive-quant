@@ -6,8 +6,6 @@ Two implementations:
 - SimulatedProfiler: Uses realistic synthetic data based on published research
 """
 
-import json
-import math
 import os
 import subprocess
 import tempfile
@@ -109,18 +107,15 @@ class SensitivityProfiler:
 
     def _detect_num_layers(self):
         """Detect the number of transformer layers in the model."""
+        code = (
+            "import re\n"
+            "with open(%r, 'rb') as f:\n"
+            "    content = f.read(1024*1024)\n"
+            r"    blocks = set(re.findall(rb'blk\.(\d+)', content))" "\n"
+            "    print(max(int(b) for b in blocks) + 1 if blocks else 32)\n"
+        ) % self.model_path
         result = subprocess.run(
-            ["python3", "-c", f"""
-import struct
-# Quick GGUF metadata scan for layer count
-# This is a simplified heuristic
-with open("{self.model_path}", "rb") as f:
-    content = f.read(1024*1024)  # Read first MB
-    # Count unique blk.N patterns
-    import re
-    blocks = set(re.findall(rb'blk\\.(\d+)', content))
-    print(max(int(b) for b in blocks) + 1 if blocks else 32)
-"""],
+            ["python3", "-c", code],
             capture_output=True, text=True
         )
         try:
@@ -140,7 +135,7 @@ with open("{self.model_path}", "rb") as f:
         print(f"   Probing quantizations: {self.PROBE_QUANTS}")
 
         # Step 1: Baseline perplexity
-        print(f"\n   📊 Measuring baseline perplexity...")
+        print("\n   📊 Measuring baseline perplexity...")
         baseline_ppl = self._measure_perplexity(self.model_path, ref_text)
         print(f"   Baseline perplexity: {baseline_ppl:.4f}")
 

@@ -12,26 +12,44 @@ This is a classic bounded knapsack problem:
 - Constraint = total memory ≤ budget
 """
 
-import numpy as np
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 
 # Available quantization levels with their properties
 # Bits per weight and approximate perplexity multiplier relative to BF16
+# S/M/L variants reflect community usage (steampunque, Unsloth benchmarks)
 QUANT_OPTIONS = {
-    "BF16":  {"bits": 16.0, "label": "BF16",  "quality": 1.000, "color": "🟢"},
-    "Q8_0":  {"bits": 8.0,  "label": "Q8_0",  "quality": 0.999, "color": "🟢"},
-    "Q6_K":  {"bits": 6.5,  "label": "Q6_K",  "quality": 0.995, "color": "🟢"},
-    "Q5_K":  {"bits": 5.5,  "label": "Q5_K",  "quality": 0.990, "color": "🟡"},
-    "Q4_K":  {"bits": 4.5,  "label": "Q4_K",  "quality": 0.975, "color": "🟡"},
-    "Q4_0":  {"bits": 4.0,  "label": "Q4_0",  "quality": 0.954, "color": "🟡"},
-    "Q3_K":  {"bits": 3.4,  "label": "Q3_K",  "quality": 0.920, "color": "🟠"},
-    "Q2_K":  {"bits": 2.6,  "label": "Q2_K",  "quality": 0.800, "color": "🔴"},
-    "IQ2_M": {"bits": 2.2,  "label": "IQ2_M", "quality": 0.700, "color": "🔴"},
+    "BF16":    {"bits": 16.0,  "label": "BF16",    "quality": 1.000, "color": "🟢"},
+    "Q8_0":    {"bits": 8.0,   "label": "Q8_0",    "quality": 0.999, "color": "🟢"},
+    "Q6_K":    {"bits": 6.5,   "label": "Q6_K",    "quality": 0.995, "color": "🟢"},
+    "Q5_K_L":  {"bits": 5.75,  "label": "Q5_K_L",  "quality": 0.993, "color": "🟢"},
+    "Q5_K_M":  {"bits": 5.5,   "label": "Q5_K_M",  "quality": 0.990, "color": "🟡"},
+    "Q5_K_S":  {"bits": 5.25,  "label": "Q5_K_S",  "quality": 0.987, "color": "🟡"},
+    "Q4_K_L":  {"bits": 4.75,  "label": "Q4_K_L",  "quality": 0.980, "color": "🟡"},
+    "Q4_K_M":  {"bits": 4.5,   "label": "Q4_K_M",  "quality": 0.975, "color": "🟡"},
+    "Q4_K_S":  {"bits": 4.25,  "label": "Q4_K_S",  "quality": 0.968, "color": "🟡"},
+    "Q4_0":    {"bits": 4.0,   "label": "Q4_0",    "quality": 0.954, "color": "🟡"},
+    "Q3_K":    {"bits": 3.4,   "label": "Q3_K",    "quality": 0.920, "color": "🟠"},
+    "IQ3_XXS": {"bits": 3.06,  "label": "IQ3_XXS", "quality": 0.880, "color": "🟠"},
+    "Q2_K":    {"bits": 2.6,   "label": "Q2_K",    "quality": 0.800, "color": "🔴"},
+    "IQ2_M":   {"bits": 2.2,   "label": "IQ2_M",   "quality": 0.700, "color": "🔴"},
 }
 
 # Ordered from highest to lowest quality
-QUANT_ORDER = ["BF16", "Q8_0", "Q6_K", "Q5_K", "Q4_K", "Q4_0", "Q3_K", "Q2_K", "IQ2_M"]
+QUANT_ORDER = [
+    "BF16", "Q8_0", "Q6_K",
+    "Q5_K_L", "Q5_K_M", "Q5_K_S",
+    "Q4_K_L", "Q4_K_M", "Q4_K_S",
+    "Q4_0", "Q3_K", "IQ3_XXS", "Q2_K", "IQ2_M",
+]
+
+# Backward compat: old names → new canonical names
+_QUANT_ALIASES = {"Q5_K": "Q5_K_M", "Q4_K": "Q4_K_M"}
+
+
+def resolve_quant(name: str) -> str:
+    """Resolve a quant name, handling old aliases (Q5_K → Q5_K_M, etc.)."""
+    return _QUANT_ALIASES.get(name, name)
 
 
 class KnapsackSolver:
@@ -49,6 +67,7 @@ class KnapsackSolver:
         self.profile = profile
         self.num_layers = profile["num_layers"]
         self.layers = profile["layers"]
+        self.special_tensors = profile.get("special_tensors", {})
 
         # Get model size info
         self.bf16_size_gb = profile.get("bf16_size_gb", self._estimate_bf16_size())
@@ -166,8 +185,8 @@ class KnapsackSolver:
         avg_bits = sum(QUANT_OPTIONS[allocation[i]]["bits"] for i in range(self.num_layers)) / self.num_layers
 
         # What would uniform Q4_K_M give us?
-        uniform_size = sum(self._layer_size_gb("Q4_K") for _ in range(self.num_layers))
-        uniform_cost = sum(self._quality_cost(i, "Q4_K") for i in range(self.num_layers))
+        uniform_size = sum(self._layer_size_gb("Q4_K_M") for _ in range(self.num_layers))
+        uniform_cost = sum(self._quality_cost(i, "Q4_K_M") for i in range(self.num_layers))
 
         # Count quantization levels used
         level_counts = {}
@@ -194,6 +213,7 @@ class KnapsackSolver:
                 for i in range(self.num_layers)
             ],
             "level_distribution": level_counts,
+            "special_tensors": self.special_tensors,
             "comparison_vs_uniform_q4k": {
                 "uniform_size_gb": round(uniform_size, 2),
                 "uniform_quality_cost": round(uniform_cost, 6),
@@ -202,6 +222,32 @@ class KnapsackSolver:
                 ) if uniform_cost > 0 else 0,
                 "adaptive_size_difference_gb": round(total_size - uniform_size, 2),
             },
+        }
+
+    def best_uniform_for_budget(self, budget_gb: float) -> Dict[str, Any]:
+        """Find the highest-quality uniform quant that fits the budget."""
+        for quant in QUANT_ORDER:
+            size = sum(self._layer_size_gb(quant) for _ in range(self.num_layers))
+            if size <= budget_gb:
+                cost = sum(self._quality_cost(i, quant) for i in range(self.num_layers))
+                return {
+                    "quant": quant,
+                    "bits": QUANT_OPTIONS[quant]["bits"],
+                    "total_size_gb": round(size, 2),
+                    "total_quality_cost": round(cost, 6),
+                    "compression_ratio": round(self.bf16_size_gb / size, 2) if size > 0 else 0,
+                }
+        # Nothing fits — return the most aggressive option
+        quant = QUANT_ORDER[-1]
+        size = sum(self._layer_size_gb(quant) for _ in range(self.num_layers))
+        cost = sum(self._quality_cost(i, quant) for i in range(self.num_layers))
+        return {
+            "quant": quant,
+            "bits": QUANT_OPTIONS[quant]["bits"],
+            "total_size_gb": round(size, 2),
+            "total_quality_cost": round(cost, 6),
+            "compression_ratio": round(self.bf16_size_gb / size, 2) if size > 0 else 0,
+            "exceeds_budget": True,
         }
 
 

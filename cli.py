@@ -6,10 +6,14 @@ Profiles per-layer quantization sensitivity, solves a knapsack optimization
 for a target memory budget, and generates mixed-precision GGUF files.
 
 Usage:
-    adaptive-quant profile <model_path> [--output <profile.json>] [--bits 8,4,2]
+    adaptive-quant catalog list
+    adaptive-quant catalog show <model>
+    adaptive-quant optimize <model> --budget <GB> [--dry-run] [--script]
+    adaptive-quant optimize <model> --device <device> [--dry-run] [--script]
+    adaptive-quant benchmark <model> --budget <GB>
+    adaptive-quant profile <model_path> [--output <profile.json>] [--simulate]
     adaptive-quant generate <profile.json> --budget <GB> [--output <model.gguf>]
-    adaptive-quant compare <original.gguf> <adaptive.gguf> [--perplexity] [--bench]
-    adaptive-quant demo  # Run with simulated Qwen3.5-9B data
+    adaptive-quant demo
 """
 
 import argparse
@@ -20,14 +24,152 @@ import os
 from .profiler import SensitivityProfiler, SimulatedProfiler
 from .knapsack import KnapsackSolver
 from .generator import GGUFGenerator
-from .visualizer import print_sensitivity_heatmap, print_allocation_table, print_comparison
+from .visualizer import (
+    print_sensitivity_heatmap, print_allocation_table, print_comparison,
+    print_catalog_list, print_benchmark,
+)
 from .devices import DEVICE_PRESETS
+from . import catalog
 
+
+def _resolve_budget(args):
+    """Resolve budget from --budget or --device flag."""
+    if args.device:
+        if args.device not in DEVICE_PRESETS:
+            print(f"Unknown device '{args.device}'. Available: {', '.join(DEVICE_PRESETS.keys())}")
+            sys.exit(1)
+        preset = DEVICE_PRESETS[args.device]
+        budget_gb = preset["memory_gb"] - preset["os_overhead_gb"]
+        print(f"\n   Target device: {preset['name']}")
+        print(f"   Total memory: {preset['memory_gb']}GB, "
+              f"OS overhead: {preset['os_overhead_gb']}GB, "
+              f"available for model: {budget_gb:.1f}GB")
+        return budget_gb
+    elif args.budget:
+        print(f"\n   Target memory budget: {args.budget}GB")
+        return args.budget
+    else:
+        print("Error: specify --budget <GB> or --device <preset>")
+        sys.exit(1)
+
+
+# === New commands: catalog, optimize, benchmark ===
+
+def cmd_catalog_list(args):
+    """List all models in the catalog."""
+    models = catalog.list_models()
+    print_catalog_list(models)
+
+
+def cmd_catalog_show(args):
+    """Show detailed profile for a catalog model."""
+    try:
+        profile = catalog.get_profile(args.model)
+    except KeyError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    print(f"\n   Model: {profile['model_name']}")
+    print(f"   Architecture: {profile.get('architecture', 'dense')}")
+    print(f"   BF16 size: {profile.get('bf16_size_gb', '?')}GB")
+    print(f"   Sources: {', '.join(profile.get('sources', []))}")
+    print(f"   Confidence: {profile.get('confidence', 'N/A')}")
+
+    special = profile.get("special_tensors", {})
+    if special:
+        # Summarize special tensors
+        shexp_count = sum(1 for k in special if "shexp" in k)
+        other = {k: v for k, v in special.items() if "shexp" not in k}
+        if shexp_count:
+            print(f"   Special tensors: {shexp_count} shared-expert tensors pinned to BF16")
+        for k, v in other.items():
+            print(f"   Special tensors: {k} → {v}")
+
+    print_sensitivity_heatmap(profile)
+
+
+def cmd_optimize(args):
+    """Optimize a catalog model for a target budget/device."""
+    try:
+        profile = catalog.get_profile(args.model)
+    except KeyError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    budget_gb = _resolve_budget(args)
+    architecture = profile.get("architecture", "dense")
+
+    solver = KnapsackSolver(profile)
+    allocation = solver.solve(budget_gb=budget_gb)
+
+    print_allocation_table(allocation, profile)
+
+    if args.script:
+        generator = GGUFGenerator()
+        script = generator.generate_script(
+            source_model=f"<path-to-{profile['model_name']}-BF16.gguf>",
+            allocation=allocation,
+            output_path=f"adaptive_{profile['model_name']}_{budget_gb:.0f}gb.gguf",
+            architecture=architecture,
+        )
+        print("\n   Shell script:\n")
+        print(script)
+    elif not args.dry_run:
+        if not args.source:
+            print("\n   To generate the GGUF, provide --source <path-to-BF16.gguf>")
+            print("   Or use --script to emit a standalone shell script.")
+        else:
+            generator = GGUFGenerator(
+                llama_quantize=args.llama_quantize,
+            )
+            output = args.output or f"adaptive_{profile['model_name']}_{budget_gb:.0f}gb.gguf"
+            generator.generate(
+                source_model=args.source,
+                allocation=allocation,
+                output_path=output,
+                architecture=architecture,
+            )
+            print(f"\n   Adaptive GGUF saved to: {output}")
+    else:
+        print("\n   Dry run — no GGUF generated.")
+
+    return allocation
+
+
+def cmd_benchmark(args):
+    """Benchmark adaptive vs uniform quantization for a catalog model."""
+    try:
+        profile = catalog.get_profile(args.model)
+    except KeyError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    budget_gb = args.budget
+    print(f"\n   Benchmarking {profile['model_name']} @ {budget_gb}GB budget")
+
+    solver = KnapsackSolver(profile)
+
+    # Adaptive allocation
+    adaptive = solver.solve(budget_gb=budget_gb)
+
+    # Best uniform quant that fits
+    uniform = solver.best_uniform_for_budget(budget_gb)
+
+    # Print benchmark comparison
+    print_benchmark(adaptive, uniform, profile, budget_gb)
+
+    # Also show the allocation details
+    print_allocation_table(adaptive, profile)
+
+    return adaptive, uniform
+
+
+# === Original commands ===
 
 def cmd_profile(args):
     """Profile per-layer quantization sensitivity."""
-    print(f"\n🔬 Profiling quantization sensitivity: {args.model}")
-    print(f"   This quantizes each layer individually and measures perplexity delta.\n")
+    print(f"\n   Profiling quantization sensitivity: {args.model}")
+    print("   This quantizes each layer individually and measures perplexity delta.\n")
 
     if args.simulate:
         profiler = SimulatedProfiler(args.model)
@@ -45,7 +187,7 @@ def cmd_profile(args):
     with open(output, "w") as f:
         json.dump(profile, f, indent=2)
 
-    print(f"\n✅ Sensitivity profile saved to: {output}")
+    print(f"\n   Sensitivity profile saved to: {output}")
     print_sensitivity_heatmap(profile)
 
     return profile
@@ -56,19 +198,7 @@ def cmd_generate(args):
     with open(args.profile) as f:
         profile = json.load(f)
 
-    budget_gb = args.budget
-    if args.device:
-        if args.device not in DEVICE_PRESETS:
-            print(f"❌ Unknown device '{args.device}'. Available: {', '.join(DEVICE_PRESETS.keys())}")
-            sys.exit(1)
-        budget_gb = DEVICE_PRESETS[args.device]["memory_gb"]
-        overhead_gb = DEVICE_PRESETS[args.device]["os_overhead_gb"]
-        budget_gb = budget_gb - overhead_gb
-        print(f"\n🎯 Target device: {args.device}")
-        print(f"   Total memory: {DEVICE_PRESETS[args.device]['memory_gb']}GB, "
-              f"OS overhead: {overhead_gb}GB, available for model: {budget_gb:.1f}GB")
-    else:
-        print(f"\n🎯 Target memory budget: {budget_gb}GB")
+    budget_gb = _resolve_budget(args)
 
     solver = KnapsackSolver(profile)
     allocation = solver.solve(budget_gb=budget_gb)
@@ -80,14 +210,16 @@ def cmd_generate(args):
             llama_quantize=args.llama_quantize,
         )
         output = args.output or f"adaptive_{budget_gb:.0f}gb.gguf"
+        architecture = profile.get("architecture", "dense")
         generator.generate(
             source_model=profile["model_path"],
             allocation=allocation,
             output_path=output,
+            architecture=architecture,
         )
-        print(f"\n✅ Adaptive GGUF saved to: {output}")
+        print(f"\n   Adaptive GGUF saved to: {output}")
     else:
-        print(f"\n📋 Dry run — no GGUF generated. Use without --dry-run to build the model.")
+        print("\n   Dry run — no GGUF generated. Use without --dry-run to build the model.")
 
     return allocation
 
@@ -113,7 +245,7 @@ def cmd_demo(args):
     devices = [
         ("M5 Max 128GB", 128 - 12),
         ("M5 Pro 64GB", 64 - 8),
-        ("M5 Air 24GB", 24 - 6),
+        ("M4 Air 32GB", 32 - 6),
         ("M4 Air 16GB", 16 - 5),
         ("iPhone 17 Pro 8GB", 8 - 4),
     ]
@@ -121,7 +253,7 @@ def cmd_demo(args):
     allocations = {}
     for device_name, budget in devices:
         print(f"\n{'─' * 70}")
-        print(f"  STEP 2: Knapsack Optimization → {device_name} ({budget:.0f}GB available)")
+        print(f"  STEP 2: Knapsack Optimization -> {device_name} ({budget:.0f}GB available)")
         print(f"{'─' * 70}")
 
         alloc = solver.solve(budget_gb=budget)
@@ -130,7 +262,7 @@ def cmd_demo(args):
 
     # Step 3: Compare against uniform quantization
     print(f"\n{'─' * 70}")
-    print(f"  STEP 3: Adaptive vs Uniform Quantization Comparison")
+    print("  STEP 3: Adaptive vs Uniform Quantization Comparison")
     print(f"{'─' * 70}")
     print_comparison(allocations, profile)
 
@@ -142,11 +274,10 @@ def cmd_demo(args):
     with open("adaptive_quant_demo.json", "w") as f:
         json.dump(demo_output, f, indent=2)
 
-    print(f"\n✅ Full demo data saved to: adaptive_quant_demo.json")
-    print(f"\n💡 To run this on a real model:")
-    print(f"   1. Install llama.cpp: brew install llama.cpp")
-    print(f"   2. Profile:  adaptive-quant profile path/to/Qwen3.5-9B-BF16.gguf")
-    print(f"   3. Generate: adaptive-quant generate sensitivity.json --device m5-pro-64gb")
+    print("\n   Full demo data saved to: adaptive_quant_demo.json")
+    print("\n   To use community-sourced profiles instead:")
+    print("   adaptive-quant catalog list")
+    print("   adaptive-quant benchmark Qwen3.5-35B-A3B --budget 26")
 
 
 def main():
@@ -156,7 +287,30 @@ def main():
     )
     sub = parser.add_subparsers(dest="command")
 
-    # profile
+    # catalog
+    p_catalog = sub.add_parser("catalog", help="Browse community-sourced model profiles")
+    catalog_sub = p_catalog.add_subparsers(dest="catalog_action")
+    catalog_sub.add_parser("list", help="List all available models")
+    p_catalog_show = catalog_sub.add_parser("show", help="Show profile details for a model")
+    p_catalog_show.add_argument("model", help="Model name (e.g., Qwen3.5-35B-A3B)")
+
+    # optimize
+    p_opt = sub.add_parser("optimize", help="Optimize a catalog model for a target budget")
+    p_opt.add_argument("model", help="Model name from catalog")
+    p_opt.add_argument("--budget", type=float, help="Memory budget in GB")
+    p_opt.add_argument("--device", help="Target device preset (e.g., m4-air-32gb)")
+    p_opt.add_argument("--output", "-o", help="Output GGUF path")
+    p_opt.add_argument("--source", help="Path to BF16 source GGUF for generation")
+    p_opt.add_argument("--dry-run", action="store_true", help="Show allocation without generating")
+    p_opt.add_argument("--script", action="store_true", help="Output a shell script instead of generating")
+    p_opt.add_argument("--llama-quantize", default="llama-quantize", help="Path to llama-quantize binary")
+
+    # benchmark
+    p_bench = sub.add_parser("benchmark", help="Compare adaptive vs uniform quantization")
+    p_bench.add_argument("model", help="Model name from catalog")
+    p_bench.add_argument("--budget", type=float, required=True, help="Memory budget in GB")
+
+    # profile (original)
     p_profile = sub.add_parser("profile", help="Profile per-layer quantization sensitivity")
     p_profile.add_argument("model", help="Path to BF16/F16 GGUF model file")
     p_profile.add_argument("--output", "-o", help="Output JSON path")
@@ -165,7 +319,7 @@ def main():
     p_profile.add_argument("--llama-quantize", default="llama-quantize", help="Path to llama-quantize binary")
     p_profile.add_argument("--reference-text", default=None, help="Reference text for perplexity (default: wikitext-2)")
 
-    # generate
+    # generate (original)
     p_gen = sub.add_parser("generate", help="Generate adaptive mixed-precision GGUF")
     p_gen.add_argument("profile", help="Path to sensitivity profile JSON")
     p_gen.add_argument("--budget", type=float, help="Memory budget in GB")
@@ -174,12 +328,23 @@ def main():
     p_gen.add_argument("--dry-run", action="store_true", help="Show allocation without generating")
     p_gen.add_argument("--llama-quantize", default="llama-quantize", help="Path to llama-quantize binary")
 
-    # demo
+    # demo (original)
     sub.add_parser("demo", help="Run full pipeline with simulated Qwen3.5-9B data")
 
     args = parser.parse_args()
 
-    if args.command == "profile":
+    if args.command == "catalog":
+        if args.catalog_action == "list":
+            cmd_catalog_list(args)
+        elif args.catalog_action == "show":
+            cmd_catalog_show(args)
+        else:
+            p_catalog.print_help()
+    elif args.command == "optimize":
+        cmd_optimize(args)
+    elif args.command == "benchmark":
+        cmd_benchmark(args)
+    elif args.command == "profile":
         cmd_profile(args)
     elif args.command == "generate":
         cmd_generate(args)
