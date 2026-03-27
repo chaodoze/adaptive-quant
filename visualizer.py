@@ -256,3 +256,61 @@ def print_benchmark(adaptive_alloc, uniform_result, profile, budget_gb):
         print(f"   Uniform {u['quant']} size: {u['total_size_gb']:.2f}GB — model cannot fit uniformly.")
 
     print(f"   {'═' * 72}")
+
+
+def print_kv_analysis(kv_results, model_name, model_weight_gb, total_memory_gb):
+    """Print TurboQuant KV cache analysis across cache types."""
+    headroom_gb = total_memory_gb - model_weight_gb
+
+    print(f"\n   {'═' * 76}")
+    print(f"   TURBOQUANT KV CACHE: {model_name}")
+    print(f"   Model weights: {model_weight_gb:.2f}GB | "
+          f"Total memory: {total_memory_gb:.1f}GB | "
+          f"KV headroom: {headroom_gb:.2f}GB")
+    print(f"   {'═' * 76}")
+
+    print(f"\n   {'Cache Type':<26} {'Compress':>8} {'KV@16K':>8} {'KV@32K':>8} {'Max Context':>12}")
+    print(f"   {'─' * 66}")
+
+    for r in kv_results:
+        kv_16k = r["cache_at_ref"].get(16384, 0)
+        kv_32k = r["cache_at_ref"].get(32768, 0)
+        max_ctx = r["max_context_k"]
+
+        # Color code by context length
+        max_tokens = r["max_context_length"]
+        if max_tokens >= 32768:
+            ctx_str = _green(f"{max_ctx:>12}")
+        elif max_tokens >= 8192:
+            ctx_str = _yellow(f"{max_ctx:>12}")
+        elif max_tokens > 0:
+            ctx_str = _red(f"{max_ctx:>12}")
+        else:
+            ctx_str = _red(f"{'NO FIT':>12}")
+
+        compress = f"{r['compression_vs_f16']:.1f}x"
+        print(f"   {r['label']:<26} {compress:>8} {kv_16k:>7.2f}G {kv_32k:>7.2f}G {ctx_str}")
+
+    print(f"   {'─' * 66}")
+
+    # Show the impact story
+    f16_result = kv_results[0]  # f16 is first
+    q4_result = kv_results[-1]  # q4_0 is last
+
+    f16_ctx = f16_result["max_context_length"]
+    q4_ctx = q4_result["max_context_length"]
+
+    if f16_ctx > 0 and q4_ctx > 0:
+        multiplier = q4_ctx / f16_ctx
+        print("\n   TurboQuant impact (Q4_0 vs FP16):")
+        print(f"     FP16 cache: {f16_result['max_context_k']} max context")
+        print(f"     Q4_0 cache: {_green(q4_result['max_context_k'])} max context "
+              f"({_green(f'{multiplier:.1f}x longer')})")
+    elif q4_ctx > 0 and f16_ctx == 0:
+        print(f"\n   {_green('TurboQuant enables context that FP16 cache cannot fit!')}")
+        print(f"     FP16 cache: {_red('no room')} (model weights fill all memory)")
+        print(f"     Q4_0 cache: {_green(q4_result['max_context_k'])} max context")
+    elif q4_ctx == 0:
+        print(f"\n   {_red('Model weights exceed memory budget — no room for KV cache at any setting.')}")
+
+    print(f"   {'═' * 76}")

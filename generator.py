@@ -177,11 +177,12 @@ class GGUFGenerator:
             raise RuntimeError(f"Output file not created: {output_path}")
 
     def generate_script(self, source_model, allocation, output_path="adaptive.gguf",
-                        architecture="dense"):
+                        architecture="dense", cache_type=None):
         """
         Generate a shell script that can be run later.
 
         Useful when you want to profile on one machine and quantize on another.
+        Includes TurboQuant KV cache flags if cache_type is specified.
         """
         level_dist = allocation["level_distribution"]
         base_quant = max(level_dist, key=level_dist.get)
@@ -195,12 +196,17 @@ class GGUFGenerator:
             f"# Avg bits: {allocation['avg_bits_per_weight']}",
             f"# Compression: {allocation.get('compression_ratio', 0):.1f}x",
             f"# Architecture: {architecture}",
-            "",
-            "llama-quantize \\",
-            f"  {source_model} \\",
-            f"  {output_path} \\",
-            f"  {base_quant_str} \\",
         ]
+        if cache_type and cache_type != "f16":
+            lines.append(f"# KV cache: TurboQuant {cache_type}")
+        lines.append("")
+
+        # Step 1: Quantize
+        lines.append("# Step 1: Build adaptive mixed-precision GGUF")
+        lines.append("llama-quantize \\")
+        lines.append(f"  {source_model} \\")
+        lines.append(f"  {output_path} \\")
+        lines.append(f"  {base_quant_str} \\")
 
         overrides = self._build_overrides(allocation, base_quant, architecture)
         for override in overrides:
@@ -208,5 +214,17 @@ class GGUFGenerator:
 
         # Remove trailing backslash from last line
         lines[-1] = lines[-1].rstrip(" \\")
+
+        # Step 2: Run with TurboQuant KV cache
+        if cache_type and cache_type != "f16":
+            lines.extend([
+                "",
+                "# Step 2: Run with TurboQuant KV cache compression",
+                "llama-cli \\",
+                f"  -m {output_path} \\",
+                f"  --cache-type-k {cache_type} \\",
+                f"  --cache-type-v {cache_type} \\",
+                "  -cnv -ngl 99",
+            ])
 
         return "\n".join(lines)

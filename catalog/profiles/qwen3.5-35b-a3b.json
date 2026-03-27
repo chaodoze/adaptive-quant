@@ -338,5 +338,12 @@
       "sensitivity_score": 1.2688,
       "sensitivities": {}
     }
-  ]
+  ],
+  "kv_architecture": {
+    "num_kv_layers": 10,
+    "num_kv_heads": 2,
+    "head_dim": 256,
+    "total_layers": 40,
+    "attention_pattern": "3:1 DeltaNet:Attention (every 4th layer is full attention)"
+  }
 }

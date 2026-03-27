@@ -26,8 +26,9 @@ from .knapsack import KnapsackSolver
 from .generator import GGUFGenerator
 from .visualizer import (
     print_sensitivity_heatmap, print_allocation_table, print_comparison,
-    print_catalog_list, print_benchmark,
+    print_catalog_list, print_benchmark, print_kv_analysis,
 )
+from .kvcache import kv_analysis
 from .devices import DEVICE_PRESETS
 from . import catalog
 
@@ -96,11 +97,25 @@ def cmd_optimize(args):
         print(f"Error: {e}")
         sys.exit(1)
 
-    budget_gb = _resolve_budget(args)
+    total_budget_gb = _resolve_budget(args)
     architecture = profile.get("architecture", "dense")
+    cache_type = getattr(args, "cache_type", "q4_0") or "q4_0"
+    context_length = getattr(args, "context", None)
+
+    # Reserve memory for KV cache if context target specified
+    weight_budget_gb = total_budget_gb
+    kv_reserved_gb = 0
+    if context_length and profile.get("kv_architecture"):
+        from .kvcache import kv_cache_size_gb
+        kv_reserved_gb = kv_cache_size_gb(context_length, cache_type, profile)
+        weight_budget_gb = total_budget_gb - kv_reserved_gb
+        print(f"\n   KV cache reservation: {kv_reserved_gb:.2f}GB "
+              f"for {context_length // 1024}K context @ {cache_type}")
+        print(f"   Weight budget: {weight_budget_gb:.2f}GB "
+              f"(total {total_budget_gb:.1f}GB - {kv_reserved_gb:.2f}GB KV)")
 
     solver = KnapsackSolver(profile)
-    allocation = solver.solve(budget_gb=budget_gb)
+    allocation = solver.solve(budget_gb=weight_budget_gb)
 
     print_allocation_table(allocation, profile)
 
@@ -109,8 +124,9 @@ def cmd_optimize(args):
         script = generator.generate_script(
             source_model=f"<path-to-{profile['model_name']}-BF16.gguf>",
             allocation=allocation,
-            output_path=f"adaptive_{profile['model_name']}_{budget_gb:.0f}gb.gguf",
+            output_path=f"adaptive_{profile['model_name']}_{total_budget_gb:.0f}gb.gguf",
             architecture=architecture,
+            cache_type=cache_type,
         )
         print("\n   Shell script:\n")
         print(script)
@@ -122,7 +138,7 @@ def cmd_optimize(args):
             generator = GGUFGenerator(
                 llama_quantize=args.llama_quantize,
             )
-            output = args.output or f"adaptive_{profile['model_name']}_{budget_gb:.0f}gb.gguf"
+            output = args.output or f"adaptive_{profile['model_name']}_{total_budget_gb:.0f}gb.gguf"
             generator.generate(
                 source_model=args.source,
                 allocation=allocation,
@@ -132,6 +148,15 @@ def cmd_optimize(args):
             print(f"\n   Adaptive GGUF saved to: {output}")
     else:
         print("\n   Dry run — no GGUF generated.")
+
+    # TurboQuant KV cache analysis
+    if profile.get("kv_architecture"):
+        kv_results = kv_analysis(profile, allocation["total_size_gb"], total_budget_gb)
+        print_kv_analysis(kv_results, profile["model_name"],
+                          allocation["total_size_gb"], total_budget_gb)
+
+        print("\n   Recommended llama.cpp flags for TurboQuant:")
+        print(f"   --cache-type-k {cache_type} --cache-type-v {cache_type}")
 
     return allocation
 
@@ -144,22 +169,42 @@ def cmd_benchmark(args):
         print(f"Error: {e}")
         sys.exit(1)
 
-    budget_gb = args.budget
-    print(f"\n   Benchmarking {profile['model_name']} @ {budget_gb}GB budget")
+    total_budget_gb = args.budget
+    cache_type = getattr(args, "cache_type", "q4_0") or "q4_0"
+    context_length = getattr(args, "context", None)
+
+    # Reserve memory for KV cache if context target specified
+    weight_budget_gb = total_budget_gb
+    if context_length and profile.get("kv_architecture"):
+        from .kvcache import kv_cache_size_gb
+        kv_reserved_gb = kv_cache_size_gb(context_length, cache_type, profile)
+        weight_budget_gb = total_budget_gb - kv_reserved_gb
+        print(f"\n   KV cache reservation: {kv_reserved_gb:.2f}GB "
+              f"for {context_length // 1024}K context @ {cache_type}")
+        print(f"   Weight budget: {weight_budget_gb:.2f}GB")
+
+    print(f"\n   Benchmarking {profile['model_name']} @ {weight_budget_gb:.1f}GB weight budget"
+          f" ({total_budget_gb:.1f}GB total)")
 
     solver = KnapsackSolver(profile)
 
     # Adaptive allocation
-    adaptive = solver.solve(budget_gb=budget_gb)
+    adaptive = solver.solve(budget_gb=weight_budget_gb)
 
     # Best uniform quant that fits
-    uniform = solver.best_uniform_for_budget(budget_gb)
+    uniform = solver.best_uniform_for_budget(weight_budget_gb)
 
     # Print benchmark comparison
-    print_benchmark(adaptive, uniform, profile, budget_gb)
+    print_benchmark(adaptive, uniform, profile, weight_budget_gb)
 
     # Also show the allocation details
     print_allocation_table(adaptive, profile)
+
+    # TurboQuant KV cache analysis
+    if profile.get("kv_architecture"):
+        kv_results = kv_analysis(profile, adaptive["total_size_gb"], total_budget_gb)
+        print_kv_analysis(kv_results, profile["model_name"],
+                          adaptive["total_size_gb"], total_budget_gb)
 
     return adaptive, uniform
 
@@ -303,12 +348,22 @@ def main():
     p_opt.add_argument("--source", help="Path to BF16 source GGUF for generation")
     p_opt.add_argument("--dry-run", action="store_true", help="Show allocation without generating")
     p_opt.add_argument("--script", action="store_true", help="Output a shell script instead of generating")
+    p_opt.add_argument("--cache-type", default="q4_0",
+                       choices=["f16", "q8_0", "q4_1", "q4_0"],
+                       help="KV cache quantization type (default: q4_0)")
+    p_opt.add_argument("--context", type=int, default=None,
+                       help="Target context length in tokens (reserves KV cache memory from budget)")
     p_opt.add_argument("--llama-quantize", default="llama-quantize", help="Path to llama-quantize binary")
 
     # benchmark
     p_bench = sub.add_parser("benchmark", help="Compare adaptive vs uniform quantization")
     p_bench.add_argument("model", help="Model name from catalog")
-    p_bench.add_argument("--budget", type=float, required=True, help="Memory budget in GB")
+    p_bench.add_argument("--budget", type=float, required=True, help="Total memory budget in GB")
+    p_bench.add_argument("--cache-type", default="q4_0",
+                         choices=["f16", "q8_0", "q4_1", "q4_0"],
+                         help="KV cache quantization type (default: q4_0)")
+    p_bench.add_argument("--context", type=int, default=None,
+                         help="Target context length in tokens (reserves KV cache memory)")
 
     # profile (original)
     p_profile = sub.add_parser("profile", help="Profile per-layer quantization sensitivity")
