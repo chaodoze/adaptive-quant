@@ -33,6 +33,8 @@ class GGUFGenerator:
         "IQ3_XXS": "iq3_xxs",
         "Q2_K":    "q2_k",
         "IQ2_M":   "iq2_m",
+        "IQ1_M":   "iq1_m",
+        "IQ1_S":   "iq1_s",
         # Legacy aliases
         "Q5_K":    "q5_k",
         "Q4_K":    "q4_k",

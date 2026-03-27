@@ -33,6 +33,8 @@ QUANT_OPTIONS = {
     "IQ3_XXS": {"bits": 3.06,  "label": "IQ3_XXS", "quality": 0.880, "color": "🟠"},
     "Q2_K":    {"bits": 2.6,   "label": "Q2_K",    "quality": 0.800, "color": "🔴"},
     "IQ2_M":   {"bits": 2.2,   "label": "IQ2_M",   "quality": 0.700, "color": "🔴"},
+    "IQ1_M":   {"bits": 1.75,  "label": "IQ1_M",   "quality": 0.500, "color": "🔴"},
+    "IQ1_S":   {"bits": 1.56,  "label": "IQ1_S",   "quality": 0.350, "color": "🔴"},
 }
 
 # Ordered from highest to lowest quality
@@ -40,7 +42,7 @@ QUANT_ORDER = [
     "BF16", "Q8_0", "Q6_K",
     "Q5_K_L", "Q5_K_M", "Q5_K_S",
     "Q4_K_L", "Q4_K_M", "Q4_K_S",
-    "Q4_0", "Q3_K", "IQ3_XXS", "Q2_K", "IQ2_M",
+    "Q4_0", "Q3_K", "IQ3_XXS", "Q2_K", "IQ2_M", "IQ1_M", "IQ1_S",
 ]
 
 # Backward compat: old names → new canonical names
