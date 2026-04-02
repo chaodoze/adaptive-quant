@@ -77,3 +77,30 @@ Two paths to the same solver: **Community Catalog** or **DIY Profiling** → **K
 | Qwen3.5-35B-A3B | 40 | MoE hybrid | steampunque + Unsloth + Kaitchup |
 | Qwen3.5-27B | 64 | Dense hybrid | Unsloth + Kaitchup |
 | Qwen3.5-122B-A10B | 48 | MoE hybrid | Unsloth + Kaitchup |
+
+## Hardware Learnings (M4 MacBook Air 32GB)
+
+### GPU Memory Reality
+- Metal reports `recommendedMaxWorkingSetSize = 22.9GB`, but actual usable is lower due to compute buffer overhead
+- A 21GB model (Q5_K_S) OOMs even at `-ngl 20` — the unified memory pool is shared with OS (~6-8GB)
+- **Practical GPU limit: ~15-18GB model weights** to leave room for Metal buffers, KV cache, and OS
+- CPU-only (`-ngl 0`) works but is extremely slow for 20GB+ models
+
+### Quantization Workflow
+- BF16 source GGUFs from `unsloth/<model>-GGUF` (e.g., `unsloth/Qwen3.5-27B-GGUF`)
+- `llama-quantize` flags go **before** positional args (source, output, type)
+- Use `--tensor-type-file` for many overrides instead of inline `--tensor-type` flags
+- Use `--token-embedding-type` and `--output-tensor-type` for special tensors (not `--tensor-type`)
+- S/M/L variants (Q5_K_S, Q5_K_M, Q5_K_L) are **base presets** — per-tensor overrides only accept `q5_k`, `q4_k`, etc.
+- Quantization takes ~5-6 minutes for a 35B model on M4 Air
+
+### Model Sizing for This Hardware
+- **35B-A3B at 22GB (Q5_K_S)**: OOMs on GPU. Too big for M4 Air 32GB.
+- **35B-A3B at 15GB (Q3_K)**: Fits GPU but quality cost is high (2.27). MoE helps since only 3B active.
+- **27B at 15GB (Q4_K_M)**: Best balance — dense model, all params active, quality cost 1.60. Leaves ~8GB for GPU overhead + KV cache.
+- **27B at 18GB (Q5_K_S)**: Higher quality (cost 0.67) but tighter GPU fit.
+- **Recommended: Qwen3.5-27B at Q4_K_M (~15GB)** for practical daily use on this hardware.
+
+### TurboQuant KV Cache
+- Run with `--cache-type-k q4_0 --cache-type-v q4_0` for 3.6x longer context vs FP16 cache
+- Only full attention layers (every 4th in Qwen3.5 hybrid) use KV cache; DeltaNet layers use fixed-size state
